@@ -23,13 +23,14 @@ The application includes a bonus feature that uses the **Groq API** to generate 
 
 The system is a clear, end-to-end pipeline that takes user input and produces a recommendation.
 
-![System Diagram](images/system_diagram.png)  1.  **Input:** The user provides a job description and uploads resumes.
-2.  **User Input:** The application reads the content from both `.txt` and `.pdf` files.
-3.  **File Pre-Processing:** Based on the user's selected **Embedding Method**, the application either uses the full text or extracts key sections from both the job description and the resumes.
-4.  **Embedding:** The pre-processed texts are converted into numerical vectors (embeddings) using a **Sentence-Transformer model**.
-5.  **Similarity Calculation:** The cosine similarity between the job description embedding and each resume embedding is calculated to determine a match score.
-6.  **Ranking:** Candidates are sorted by their similarity score, and the highest-ranked candidate is displayed.
-7.  **AI Summary:** When requested, the full job description and the top candidate's resume are sent to the **Groq API** to generate a concise summary.
+![System Diagram](images/system_diagram.png)  
+### 1.  **Input:** The user provides a job description and uploads resumes.
+### 2.  **User Input:** The application reads the content from both `.txt` and `.pdf` files.
+### 3.  **File Pre-Processing:** Based on the user's selected **Embedding Method**, the application either uses the full text or extracts key sections from both the job description and the resumes.
+### 4.  **Embedding:** The pre-processed texts are converted into numerical vectors (embeddings) using a **Sentence-Transformer model**.
+### 5.  **Similarity Calculation:** The cosine similarity between the job description embedding and each resume embedding is calculated to determine a match score.
+### 6.  **Ranking:** Candidates are sorted by their similarity score, and the highest-ranked candidate is displayed.
+### 7.  **AI Summary:** When requested, the full job description and the top candidate's resume are sent to the **Groq API** to generate a concise summary.
 
 ## 🔧 Technologies Used
 
