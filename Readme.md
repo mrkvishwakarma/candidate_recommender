@@ -23,7 +23,7 @@ The application includes a bonus feature that uses the **Groq API** to generate 
 
 The system is a clear, end-to-end pipeline that takes user input and produces a recommendation.
 
-![System Diagram](CRA_System_Diagram.png)  1.  **Input:** The user provides a job description and uploads resumes.
+![System Diagram](images/system_diagram.png)  1.  **Input:** The user provides a job description and uploads resumes.
 2.  **User Input:** The application reads the content from both `.txt` and `.pdf` files.
 3.  **File Pre-Processing:** Based on the user's selected **Embedding Method**, the application either uses the full text or extracts key sections from both the job description and the resumes.
 4.  **Embedding:** The pre-processed texts are converted into numerical vectors (embeddings) using a **Sentence-Transformer model**.
@@ -39,6 +39,18 @@ The system is a clear, end-to-end pipeline that takes user input and produces a 
 -   **[pdfplumber](https://github.com/jsvine/pdfplumber)**: For extracting text from PDF files while preserving some formatting.
 -   **[scikit-learn](https://scikit-learn.org/)**: To calculate cosine similarity.
 -   **[python-dotenv](https://pypi.org/project/python-dotenv/)**: For managing API keys securely.
+
+## 📸 Screenshots
+
+Here are a few screenshots to demonstrate the application's user interface and functionality.
+
+### **1. Input**
+A screenshot showing the main application with the job description text area, resume file uploader, and embedding method selector.
+![Input Form](images/input.png)
+
+### **1. Output**
+A screenshot showing the output for the given job descriptions and resume uploaded with the calculated similarity score.
+![Input Form](images/output.png)
 
 ## 🚀 Setup and Installation
 
