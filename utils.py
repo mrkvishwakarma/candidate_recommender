@@ -6,7 +6,6 @@ import streamlit as st
 import numpy as np
 import pdfplumber
 import os
-import re
 
 load_dotenv()
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
@@ -17,26 +16,12 @@ def load_sbert_model():
     return SentenceTransformer('all-MiniLM-L6-v2')
 
 
-def get_embeddings(texts, model):
-    """Generate embeddings for a list of texts."""
-    return model.encode(texts)
-
-
 @st.cache_resource
 def get_groq_client(api_key):
     """Initialize and return a Groq client."""
     if not api_key:
         raise ValueError("Groq API key is not set. Please add it to your .env file.")
     return Groq(api_key=api_key)
-
-
-def calculate_similarity(job_embedding, resume_embeddings):
-    """
-    Compute cosine similarity between the job description embedding
-    and each resume embedding.
-    """
-    job_embedding_reshaped = job_embedding.reshape(1, -1)
-    return cosine_similarity(job_embedding_reshaped, resume_embeddings)[0]
 
 
 def generate_summary(jd_text, resume_text):
@@ -94,16 +79,13 @@ def read_text_file(file):
         return f"Unsupported file type: {file_extension}"
 
 
-def extract_key_sections_from_resume( resume_text):
+def get_resume_summary_prompts(resume_text):
     """
-    Summarizes the full resume into key sections using guided prompts.
-    Returns a dictionary with 3 summarized parts:
-        - Qualifications and Education
-        - Skills and Certifications
-        - Projects and Work Experience
+    Generates and returns a dictionary of prompts for extracting structured
+    information from a resume.
     """
 
-    prompts = {
+    resume_prompts = {
         "Qualifications and Education": (
             f"""
             You are an ATS (Applicant Tracking System) that extracts relevant information from resumes
@@ -138,35 +120,16 @@ def extract_key_sections_from_resume( resume_text):
         ),
     }
 
-    section_summaries = {}
+    return resume_prompts
 
-    client = get_groq_client(GROQ_API_KEY)
 
-    for section, prompt in prompts.items():
-        try:
-            response = client.chat.completions.create(
-                model="llama3-8b-8192",
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0.5,
-                max_tokens=250,
-            )
-            section_summaries[section] = response.choices[0].message.content.strip()
-        except Exception as e:
-            return f"Error generating summary: {e}"
-
-    return section_summaries
-
-def extract_key_sections_from_jd(jd_text):
+def get_jd_summary_prompts(jd_text):
     """
-    Extracts structured sections from a job description using guided prompts.
-    Returns a dictionary with:
-        - Role Overview
-        - Required Skills and Technologies
-        - Qualifications and Education
-        - Responsibilities and Duties
+    Generates and returns a dictionary of prompts for extracting structured
+    information from a job description.
     """
 
-    prompts = {
+    jd_prompts = {
         "About Company": (
             f"""
                 You are an ATS (Applicant Tracking System) that extracts structured information from job descriptions.
@@ -222,8 +185,16 @@ def extract_key_sections_from_jd(jd_text):
         ),
     }
 
-    section_summaries = {}
+    return jd_prompts
 
+
+def extract_key_sections(prompts):
+    """
+    Extracts structured sections from a job description using guided prompts.
+    Returns a dictionary with extracted information.
+    """
+
+    section_summaries = {}
     client = get_groq_client(GROQ_API_KEY)
 
     for section, prompt in prompts.items():
@@ -232,13 +203,13 @@ def extract_key_sections_from_jd(jd_text):
                 model="llama3-8b-8192",
                 messages=[{"role": "user", "content": prompt}],
                 temperature=0.5,
-                max_tokens=250,
             )
             section_summaries[section] = response.choices[0].message.content.strip()
         except Exception as e:
             return f"Error generating summary: {e}"
 
     return section_summaries
+
 
 def compute_section_similarity(resume_sections, jd_sections):
     """

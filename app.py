@@ -43,10 +43,12 @@ if st.button("Find Top Candidates"):
             else:
                 candidate_list = []
 
-                jd_sections = extract_key_sections_from_jd(job_description)
+                jd_prompts = get_jd_summary_prompts(job_description)
+                jd_sections = extract_key_sections(jd_prompts)
 
                 for resume in resumes:
-                    resume_sections = extract_key_sections_from_resume(resume['full_text'])
+                    resume_prompts = get_resume_summary_prompts(resume['full_text'])
+                    resume_sections = extract_key_sections(resume_prompts)
 
                     if isinstance(resume_sections, str) and resume_sections.startswith("Error"):
                         st.warning(f"Skipping {resume['name']} due to extraction error: {resume_sections}")
@@ -78,9 +80,9 @@ if st.session_state.results:
 
         for section, score in top_candidate['section_scores'].items():
             if section != "Overall Score":
-                st.markdown(f"- **{section}:** `{score:.4f}`")
+                st.markdown(f"- **{section}:** `{score:.2%}`")
 
-        st.markdown(f"**Overall Similarity Score:** `{top_candidate['score']:.4f}`")
+        st.markdown(f"**Overall Similarity Score:** `{top_candidate['score']:.2%}`")
 
         try:
             summary = generate_summary(job_description, top_candidate['text'])
