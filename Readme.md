@@ -23,7 +23,7 @@ The application includes a bonus feature that uses the **Groq API** to generate 
 
 The system is a clear, end-to-end pipeline that takes user input and produces a recommendation.
 
-![System Diagram](images/system_diagram.png)  
+![System Diagram](images/system_design.png)  
 1.  **Input:** The user provides a job description and uploads resumes.
 2.  **User Input:** The application reads the content from both `.txt` and `.pdf` files.
 3.  **File Pre-Processing:** Based on the user's selected **Embedding Method**, the application either uses the full text or extracts key sections from both the job description and the resumes.
