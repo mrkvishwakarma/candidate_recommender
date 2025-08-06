@@ -6,6 +6,8 @@ import streamlit as st
 import numpy as np
 import pdfplumber
 import os
+import io
+import zipfile
 
 load_dotenv()
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
@@ -24,36 +26,6 @@ def get_groq_client(api_key):
     return Groq(api_key=api_key)
 
 
-def generate_summary(jd_text, resume_text):
-    """
-    Generate an AI-powered summary for why a candidate is a good fit
-    using a Groq LLM.
-    """
-    prompt = f"""
-    You are an expert recruiter. 
-    Analyze the following job description and candidate resume to explain in 3 sentences why this person is a great fit for the role. Focus on matching keywords, skills, experience and be precise.
-
-    Job Description:
-    {jd_text}
-
-    Resume:
-    {resume_text}
-
-    Summary:
-    """
-
-    client = get_groq_client(GROQ_API_KEY)
-
-    try:
-        response = client.chat.completions.create(
-            model="llama3-8b-8192",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.5,
-            max_tokens=250,
-        )
-        return response.choices[0].message.content.strip()
-    except Exception as e:
-        return f"Error generating summary: {e}"
 
 def read_pdf_file(file):
     """Reads the content of a PDF file using pdfplumber."""
@@ -69,14 +41,26 @@ def read_pdf_file(file):
 
 def read_text_file(file):
     """Reads the content of an uploaded file, handling both PDF and TXT."""
-    file_extension = file.name.split('.')[-1].lower()
+    file_ext = file.name.split('.')[-1].lower()
 
-    if file_extension == 'txt':
+    if file_ext == 'txt':
         return file.getvalue().decode("utf-8")
-    elif file_extension == 'pdf':
+    elif file_ext == 'pdf':
         return read_pdf_file(file)
     else:
-        return f"Unsupported file type: {file_extension}"
+        return f"Unsupported file type: {file_ext}"
+
+
+import re
+
+
+def extract_contact_info(resume_text):
+    """
+    Extracts name and email address from the resume.
+    """
+    email_match = re.search('\S+@\S+', resume_text)
+
+    return email_match.group(0) if email_match else ''
 
 
 def get_resume_summary_prompts(resume_text):
@@ -93,7 +77,7 @@ def get_resume_summary_prompts(resume_text):
             --------------------
             {resume_text}
             --------------------
-            Directly list all the qualifications or education of the candidate from the above given resume.
+            Directly extract all the sections which indicates qualifications or education of the candidate from the above given resume.
             """
         ),
 
@@ -104,7 +88,7 @@ def get_resume_summary_prompts(resume_text):
                --------------------
                {resume_text}
                --------------------
-               Directly list all the Skills and certifications of the candidate from the above given resume.
+               Directly extract all the sections which indicates Skills and certifications of the candidate from the above given resume.
                """
         ),
 
@@ -115,7 +99,7 @@ def get_resume_summary_prompts(resume_text):
                --------------------
                {resume_text}
                --------------------
-               Directly list all the Projects and Work Experience of the candidate from the above given resume.
+               Directly extract all the sections which indicates Projects and Work Experience of the candidate from the above given resume.
                """
         ),
     }
@@ -188,7 +172,7 @@ def get_jd_summary_prompts(jd_text):
     return jd_prompts
 
 
-def extract_key_sections(prompts):
+def generate_summary(prompts):
     """
     Extracts structured sections from a job description using guided prompts.
     Returns a dictionary with extracted information.
@@ -252,3 +236,47 @@ def compute_section_similarity(resume_sections, jd_sections):
     similarities["Overall Score"] = average_similarity
 
     return similarities
+
+
+def get_summary_prompt(jd_text, resume_text):
+    """
+    Generate an AI-powered summary for why a candidate is a good fit
+    using a Groq LLM.
+    """
+    summary_prompt = {
+            "Summary": (
+                f"""
+                You are an expert recruiter. 
+                Analyze the following job description and candidate resume to explain in 3 sentences why this person is a great fit for the role. Focus on matching keywords, skills, experience and be precise.
+            
+                Job Description:
+                {jd_text}
+            
+                Resume:
+                {resume_text}
+            
+                Summary:
+                """
+            ),
+    }
+
+    return summary_prompt
+
+
+def create_zip_file_for_resumes(resumes):
+    """
+    Creates a zip file of top candidates resumes
+    """
+    zip_buffer = io.BytesIO()
+
+    with zipfile.ZipFile(zip_buffer, "a", zipfile.ZIP_DEFLATED, False) as zip_file:
+        for i, resume_data in enumerate(resumes):
+            score = f"{resume_data['section_scores']['Overall Score']:.2f}"
+            email = resume_data['email']
+            name = resume_data['name']
+
+            filename = f"{score}_{email}_{name}.pdf"
+
+            zip_file.writestr(filename, resume_data.get('text', ''))
+
+    return zip_buffer.getvalue()

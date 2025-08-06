@@ -3,7 +3,7 @@ from utils import *
 st.set_page_config(page_title="Candidate Recommendation Agent", layout="wide")
 
 st.title("Candidate Recommendation Agent 🤖")
-st.markdown("Enter a job description and upload a list of resumes to find the best candidates.")
+st.markdown("Enter a job description and upload a resumes to find the best candidates.")
 
 job_description = st.text_area(
     "Job Description",
@@ -31,11 +31,18 @@ if st.button("Find Top Candidates"):
 
             resumes = []
             for uploaded_file in uploaded_files:
-                full_text = read_text_file(uploaded_file)  # Uses the combined reader
+                full_text = read_text_file(uploaded_file)
                 if "unsupported" in full_text or "Failed to read" in full_text:
                     st.warning(f"Skipping {uploaded_file.name}: {full_text}")
                     continue
-                resumes.append({"name": uploaded_file.name, "full_text": full_text})
+
+                email = extract_contact_info(full_text)
+
+                resumes.append({
+                    "name": uploaded_file.name,
+                    "email": email,
+                    "full_text": full_text
+                })
 
             if not resumes:
                 st.error("No valid resumes were processed.")
@@ -44,20 +51,17 @@ if st.button("Find Top Candidates"):
                 candidate_list = []
 
                 jd_prompts = get_jd_summary_prompts(job_description)
-                jd_sections = extract_key_sections(jd_prompts)
+                jd_sections = generate_summary(jd_prompts)
 
                 for resume in resumes:
                     resume_prompts = get_resume_summary_prompts(resume['full_text'])
-                    resume_sections = extract_key_sections(resume_prompts)
-
-                    if isinstance(resume_sections, str) and resume_sections.startswith("Error"):
-                        st.warning(f"Skipping {resume['name']} due to extraction error: {resume_sections}")
-                        continue
+                    resume_sections = generate_summary(resume_prompts)
 
                     similarities = compute_section_similarity(resume_sections, jd_sections)
 
                     candidate_list.append({
                         "name": resume["name"],
+                        "email": resume["email"],
                         "score": similarities.get("Overall Score", 0.0),
                         "text": resume["full_text"],
                         "section_scores": similarities
@@ -75,25 +79,33 @@ if st.session_state.results:
     st.header("Top Candidate Recommendation")
 
     if st.session_state.results:
-        top_candidate = st.session_state.results[0]
-        st.markdown(f"**1. {top_candidate['name']}** ")
+        top_candidates = st.session_state.results[:10]
 
-        for section, score in top_candidate['section_scores'].items():
-            if section != "Overall Score":
+        zip_data = create_zip_file_for_resumes(top_candidates)
+        st.download_button(
+            label="Download All Top Resumes",
+            data=zip_data,
+            file_name="top_candidates.zip",
+            mime="application/zip",
+        )
+
+        for i, top_candidate in enumerate(top_candidates):
+            st.markdown(f"**{i+1}. {top_candidate['name']}, {top_candidate['email']}** ")
+
+            for section, score in top_candidate['section_scores'].items():
                 st.markdown(f"- **{section}:** `{score:.2%}`")
 
-        st.markdown(f"**Overall Similarity Score:** `{top_candidate['score']:.2%}`")
+            try:
+                summary_prompt = get_summary_prompt(job_description, top_candidate['text'])
+                summary = generate_summary(summary_prompt)['Summary']
+                st.success("Summary generated!")
+                st.write(summary)
+            except ValueError as e:
+                st.error(str(e))
+            except Exception as e:
+                st.error(f"Failed to generate summary: {e}")
 
-        try:
-            summary = generate_summary(job_description, top_candidate['text'])
-            st.success("Summary generated!")
-            st.write(summary)
-        except ValueError as e:
-            st.error(str(e))
-        except Exception as e:
-            st.error(f"Failed to generate summary: {e}")
-
-        with st.expander("View Full Resume"):
-            st.text(top_candidate['text'])
+            with st.expander("View Full Resume"):
+                st.text(top_candidate['text'])
     else:
         st.warning("No candidates found after processing.")
