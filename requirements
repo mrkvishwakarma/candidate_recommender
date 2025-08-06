@@ -5,3 +5,5 @@ huggingface-hub
 python-dotenv
 groq
 pdfplumber
+dotenv
+numpy
